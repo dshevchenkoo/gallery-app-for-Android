@@ -1,1 +1,2 @@
-# gallery-app-for-Android
+# Gallery app for Android
+Галерея изображений с Glide
