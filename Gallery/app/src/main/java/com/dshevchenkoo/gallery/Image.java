@@ -4,18 +4,33 @@ package com.dshevchenkoo.gallery;
  * Created by dshevchenkoo on 30.04.18.
  */
 
+import android.os.AsyncTask;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-public class Image implements Parcelable {
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+
+public class Image extends ArrayList<Image> implements Parcelable {
+
+    private  String title;
     private String url;
-    private String title;
+    private static ArrayList<Image> images = new ArrayList<>();
 
     public Image(String url, String title) {
         this.url = url;
         this.title = title;
     }
+
+    public Image(){}
 
     protected Image(Parcel in) {
         url = in.readString();
@@ -50,15 +65,67 @@ public class Image implements Parcelable {
         this.title = title;
     }
 
-    public static  Image[] getImages() {
-        return new Image[]{
-                new Image("https://pp.userapi.com/c846019/v846019735/2c5bd/aXvvLbY7pxs.jpg", "Cat"),
-                new Image("https://pp.userapi.com/c847123/v847123093/2d5cd/IvnNff0Y4Bc.jpg", "GDG Omsk"),
-                new Image("https://pp.userapi.com/c840237/v840237603/4d0fd/nrmMZc5-dEI.jpg", "OLD"),
-                new Image("https://sun9-1.userapi.com/c840438/v840438611/1736a/Xet4wGVeGok.jpg", "myDog"),
-                new Image("https://sun9-1.userapi.com/c840530/v840530497/109b7/ETc56hiafkw.jpg", "me"),
-                new Image("https://pp.userapi.com/c639716/v639716389/69294/mRkbYO3l16g.jpg", "Hello, World!"),
-        };
+    public static class ParseTask extends AsyncTask<Void, Void, String> {
+
+        HttpURLConnection urlConnection = null;
+        BufferedReader reader = null;
+        String resultJson = "";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            // получаем данные с внешнего ресурса Яндекс Диска
+            try {
+                URL url = new URL("https://cloud-api.yandex.net/v1/disk/public/resources?public_key=https://yadi.sk/d/terSeecm3VQqWv&%20preview_size=S");
+
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                }
+
+                resultJson = buffer.toString();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return resultJson;
+        }
+
+        @Override
+        protected void onPostExecute(String strJson) {
+            super.onPostExecute(strJson);
+
+            JSONObject dataJsonObj = null;
+
+            try {
+                dataJsonObj = new JSONObject(strJson);
+                JSONObject trans = dataJsonObj.getJSONObject("_embedded");
+                JSONArray item = trans.getJSONArray("items");
+                images.clear();
+                // перебираем ссылки на изображения и имена
+                for (int i = 0; i < item.length(); i++) {
+                    JSONObject jsonObject = item.getJSONObject(i);
+                    Image image = new Image();
+                    image.setTitle(jsonObject.getString("name"));
+                    image.setUrl(jsonObject.getString("file"));
+                    images.add(image);
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static ArrayList<Image> getImages() {
+        return images;
     }
 
     @Override

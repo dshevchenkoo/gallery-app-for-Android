@@ -3,6 +3,7 @@ package com.dshevchenkoo.gallery;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -12,6 +13,9 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+
+import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by dshevchenkoo on 30.04.18.
@@ -24,6 +28,15 @@ public class GalleryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gallery);
 
+        try {
+            new Image.ParseTask().execute().get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+
         RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.rv_images);
         recyclerView.setHasFixedSize(true);
@@ -32,6 +45,7 @@ public class GalleryActivity extends AppCompatActivity {
         GalleryActivity.ImageGalleryAdapter adapter = new GalleryActivity.ImageGalleryAdapter(
                 this, Image.getImages());
         recyclerView.setAdapter(adapter);
+
     }
 
     private class ImageGalleryAdapter extends RecyclerView.Adapter<ImageGalleryAdapter.MyViewHolder> {
@@ -51,8 +65,7 @@ public class GalleryActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(ImageGalleryAdapter.MyViewHolder holder, int position) {
-
-            Image image = images[position];
+            Image image = images.get(position);
             ImageView imageView = holder.imageView;
 
             Glide.with(context)
@@ -62,7 +75,7 @@ public class GalleryActivity extends AppCompatActivity {
 
         @Override
         public int getItemCount() {
-            return (images.length);
+            return (images.size());
         }
 
         public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -81,19 +94,19 @@ public class GalleryActivity extends AppCompatActivity {
 
                 int position = getAdapterPosition();
                 if(position != RecyclerView.NO_POSITION) {
-                    Image image = images[position];
+                    Image image = images.get(position);
 
                     Intent intent = new Intent(context, ImageActivity.class);
-                    intent.putExtra(ImageActivity.EXTRA_IMAGE, image);
+                    intent.putExtra(ImageActivity.EXTRA_IMAGE, (Parcelable) image);
                     startActivity(intent);
                 }
             }
         }
 
-        private Image[] images;
+        private ArrayList<Image> images;
         private Context context;
 
-        public ImageGalleryAdapter(Context context, Image[] images) {
+        public ImageGalleryAdapter(Context context, ArrayList<Image> images) {
             this.context = context;
             this.images = images;
         }
